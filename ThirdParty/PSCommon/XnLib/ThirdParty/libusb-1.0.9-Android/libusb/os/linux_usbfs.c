@@ -2,6 +2,10 @@
  * Linux usbfs backend for libusb
  * Copyright (C) 2007-2009 Daniel Drake <dsd@gentoo.org>
  * Copyright (c) 2001 Johannes Erdfelt <johannes@erdfelt.com>
+ * Copyright (c) 2014 Shachar Gritzman <gritzman@outlook.com> 
+ * 
+ * Modified *find_usbfs_path function to support android SElinux policy and Lollipop, 
+ * no root is needed.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -212,45 +216,17 @@ static int check_usb_vfs(const char *dirname)
 
 static const char *find_usbfs_path(void)
 {
-// *** PrimeSense patch for Android *** 
-// Note: this func originally searched '/dev/bus/usb' before /proc/bus/usb. The order was reversed because it's currently easier to manage the /proc usbfs permissions
-	const char *path = "/proc/bus/usb";
-	const char *ret = NULL;
-
-	if (check_usb_vfs(path)) {
-		ret = path;
-	} else {
-		path = "/dev/bus/usb";
-		if (check_usb_vfs(path))
-			ret = path;
-	}
-// *** PrimeSense patch for Android ***
-	
-	/* look for /dev/usbdev*.* if the normal places fail */
-	if (ret == NULL) {
-		struct dirent *entry;
-		DIR *dir;
-
-		path = "/dev";
-		dir = opendir(path);
-		if (dir != NULL) {
-			while ((entry = readdir(dir)) != NULL) {
-				if (_is_usbdev_entry(entry, NULL, NULL)) {
-					/* found one; that's enough */
-					ret = path;
-					usbdev_names = 1;
-					break;
-				}
-			}
-			closedir(dir);
-		}
-	}
+/*  Android SElinux workaround */
+	const char *ret = "/dev/bus/usb";
 
 	if (ret != NULL)
 		usbi_dbg("found usbfs at %s", ret);
 
 	return ret;
 }
+
+
+
 
 /* the monotonic clock is not usable on all systems (e.g. embedded ones often
  * seem to lack it). fall back to REALTIME if we have to. */
@@ -1256,8 +1232,7 @@ static int op_open(struct libusb_device_handle *handle)
 
 	_get_usbfs_path(handle->dev, filename);
 	usbi_dbg("opening %s", filename);
-
-// *** PrimeSense patch for Android ***	
+	// *** PrimeSense patch for Android ***	
 	hpriv->fd = find_fd_by_name(filename);
 	
 	// Fallback for regular non-java applications
@@ -1266,7 +1241,6 @@ static int op_open(struct libusb_device_handle *handle)
 		hpriv->fd = open(filename, O_RDWR);
 	}
 // *** PrimeSense patch for Android ***
-	
 	if (hpriv->fd < 0) {
 		if (errno == EACCES) {
 			usbi_err(HANDLE_CTX(handle), "libusb couldn't open USB device %s: "

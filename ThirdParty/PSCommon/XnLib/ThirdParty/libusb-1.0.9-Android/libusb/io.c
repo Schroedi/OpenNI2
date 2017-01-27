@@ -1,4 +1,4 @@
-/*
+/* 
  * I/O functions for libusb
  * Copyright (C) 2007-2009 Daniel Drake <dsd@gentoo.org>
  * Copyright (c) 2001 Johannes Erdfelt <johannes@erdfelt.com>
@@ -26,7 +26,7 @@
 #include <string.h>
 #include <time.h>
 
-// *** PrimeSense patch for Android ***
+//Android compatibility
 #ifndef TIMESPEC_TO_TIMEVAL
 #define TIMESPEC_TO_TIMEVAL(tv, ts)                     \
         do {                                             \
@@ -34,7 +34,6 @@
                 (tv)->tv_usec = (ts)->tv_nsec / 1000;    \
         } while(0)
 #endif
-// *** PrimeSense patch for Android ***
 
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>

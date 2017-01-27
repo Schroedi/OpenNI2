@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <android/log.h>
 
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
@@ -1802,12 +1803,31 @@ void usbi_log_v(struct libusb_context *ctx, enum usbi_log_level level,
 		break;
 	}
 
-	fprintf(stream, "libusb: %d.%06d %s [%s] ",
-		(int)now.tv_sec, (int)now.tv_usec, prefix, function);
+	// *** PrimeSense patch for Android ***
+		int android_log_level;
+		char message[256];
 
-	vfprintf(stream, format, args);
+		switch (level) {
+		case LOG_LEVEL_INFO:
+			android_log_level = ANDROID_LOG_INFO;
+			break;
+		case LOG_LEVEL_WARNING:
+			android_log_level = ANDROID_LOG_WARN;
+			break;
+		case LOG_LEVEL_ERROR:
+			android_log_level = ANDROID_LOG_ERROR;
+			break;
+		case LOG_LEVEL_DEBUG:
+			android_log_level = ANDROID_LOG_DEBUG;
+			break;
+		default:
+			android_log_level = ANDROID_LOG_DEBUG;
+			break;
+		}
 
-	fprintf(stream, "\n");
+		snprintf(message, sizeof(message), format, args);
+		__android_log_write(android_log_level, "libusb", message);
+	// *** PrimeSense patch for Android ***
 }
 
 void usbi_log(struct libusb_context *ctx, enum usbi_log_level level,
